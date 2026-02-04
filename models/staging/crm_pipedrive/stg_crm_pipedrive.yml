@@ -1,0 +1,153 @@
+version: 2
+
+models:
+  - name: stg_crm_pipedrive__activity
+    description: "Staging model for Pipedrive activities. Activities represent sales actions (e.g. Sales Calls)."
+    columns:
+      - name: activity_id
+        description: "Activity identifier from the source system. Duplicates may exist in raw data."
+        tests:
+          - not_null
+      - name: activity_type_key
+        description: "Activity type key used to classify the activity (joins to activity_types.activity_type_key)."
+        tests:
+          - not_null
+      - name: assigned_to_user_id
+        description: "User ID the activity is assigned to (joins to users.user_id)."
+        tests:
+          - not_null
+      - name: deal_id
+        description: "Deal identifier the activity is linked to (joins to deal_changes.deal_id). There might be multiple activities per deal -> be careful when joining with deal_id."
+        tests:
+          - not_null
+      - name: is_done
+        description: "Completion status. True means the activity was completed, false means it was not done yet."
+        tests:
+          - not_null
+      - name: due_to_ts
+        description: "Timestamp when the activity is/was due."
+        tests:
+          - not_null
+
+  - name: stg_crm_pipedrive__activity_type
+    description: "Table defining activity types (e.g. Sales Call 1)."
+    columns:
+      - name: activity_type_id
+        description: "Primary key for activity types."
+        tests:
+          - not_null
+          - unique
+      - name: activity_type_name
+        description: "Label for the activity type (most likely how activity is displayed in UI of Pipedrive CRM)."
+        tests:
+          - not_null
+      - name: is_active
+        description: "Whether the activity type is currently active in Pipedrive CRM. If false, like for follow_up, this activity type most likely can not be selected anymore for new activities."
+        tests:
+          - not_null
+      - name: activity_type_key
+        description: "Type key used to match against activity.activity_type_key."
+        tests:
+          - not_null
+          - unique
+
+  - name: stg_crm_pipedrive__deal_changes
+    description: "Changelog table of deal updates. Each row records a change to a deal at a given time. Includes stage changes, owner changes, and lost reason assignment. Typed helper columns are provided for common changed_field_key values (stage_id, user_id, lost_reason, add_time)."
+    columns:
+      - name: deal_id
+        description: "Deal identifier."
+        tests:
+          - not_null
+      - name: change_time_ts
+        description: "Timestamp when the change was recorded."
+        tests:
+          - not_null
+      - name: changed_field_key
+        description: "Which field was changed (e.g., stage_id, user_id, lost_reason, add_time)."
+        tests:
+          - not_null
+      - name: new_value_raw
+        description: "New value stored as text (raw), used as the base for typed helper columns."
+        tests:
+          - not_null
+      - name: new_value_stage_id
+        description: "Stage_id as integer when changed_field_key = 'stage_id'."
+      - name: new_value_user_id
+        description: "User_id as integer when changed_field_key = 'user_id'."
+      - name: new_value_lost_reason_id
+        description: "Lost reason as intege when changed_field_key = 'lost_reason'."
+      - name: new_value_deal_add_time_ts
+        description: "Deal add_time timestamp when changed_field_key = 'add_time'."
+
+  - name: stg_crm_pipedrive__fields
+    description: "Contains definitions of fields and (optionally) JSONB-encoded value options. This model keeps the JSONB intact; value options are untested in stg_pipedrive__field_value_options for easy joins."
+    columns:
+      - name: field_id
+        description: "Field identifier."
+        tests:
+          - not_null
+          - unique
+      - name: field_key
+        description: "Field key (e.g., lost_reason)."
+        tests:
+          - not_null
+      - name: field_name
+        description: "Field name (most likely how displayed in UI of Pipedrive CRM -> e.g. 'Deal created' instead off 'add_time')."
+        tests:
+          - not_null
+      - name: field_value_options_jsonb
+        description: "JSONB array of option objects (id/label pairs), when present."
+
+  - name: stg_crm_pipedrive__field_value_options
+    description: "Unnested field option values from stg_pipedrive__fields.field_value_options_jsonb. Useful for mapping option IDs to labels (e.g., lost_reason ID -> lost_reason label)."
+    columns:
+      - name: field_id
+        description: "Field identifier."
+        tests:
+          - not_null
+      - name: field_key
+        description: "Field key (e.g., lost_reason)."
+        tests:
+          - not_null
+      - name: field_name
+        description: "Field name (most likely how displayed in UI of Pipedrive CRM -> e.g. 'Deal created' instead off 'add_time')."
+        tests:
+          - not_null
+      - name: option_id
+        description: "Option identifier stored as integer to match with new_value_lost_reason_id or new_value_stage_id."
+        tests:
+          - not_null
+      - name: option_label
+        description: "Label for the option (most likely how displayed in UI of Pipedrive CRM)."
+
+  - name: stg_crm_pipedrive__stages
+    description: "Funnel stage dimension. Maps stage_id to stage_name. Stages define the funnel steps used in reporting."
+    columns:
+      - name: stage_id
+        description: "Stage identifier."
+        tests:
+          - not_null
+          - unique
+      - name: stage_name
+        description: "Name of the stage (most likely how displayed in UI of Pipedrive CRM)."
+        tests:
+          - not_null
+
+  - name: stg_crm_pipedrive__users
+    description: "Pipedrive users dimension. Represents internal users (e.g., sales reps) who can be assigned to activities and appear in deal change logs."
+    columns:
+      - name: user_id
+        description: "User identifier."
+        tests:
+          - not_null
+          - unique
+      - name: user_name
+        description: "User name."
+        tests:
+          - not_null
+      - name: user_email
+        description: "User email address."
+        tests:
+          - not_null
+      - name: modified_ts
+        description: "Timestamp when the user record was modified."

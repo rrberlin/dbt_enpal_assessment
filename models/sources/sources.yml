@@ -1,0 +1,19 @@
+version: 2
+
+sources:
+  - name: raw_crm_pipedrive
+    database: postgres
+    schema: public
+    tables:
+      - name: activity
+        description: "Contains information about activities (e.g. Sales Calls) scheduled (and done) in Pipedrive CRM"
+      - name: activity_types
+        description: "Contains information about activity types used in the activity table"
+      - name: deal_changes
+        description: "Contains information about deals and all changes that were made to them in the process (when they were created in Pipedrive CRM, which user is owning the deal, the stage of the deal and the lost_reason) with timestamps of these changes"
+      - name: fields
+        description: "Contains information about the changed_field_key used in the deal_changes table"
+      - name: stages
+        description: "Contains information about the funnel stages in Pipedrive CRM"
+      - name: users
+        description: "Contains information about the users of Pipedrive CRM (e.g. sales representatives)"

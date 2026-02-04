@@ -1,0 +1,107 @@
+version: 2
+
+models:
+  - name: int_crm_pipedrive__activity
+    description: "Activity table enriched with activity_type_name that serves as basis for all analyses regarding activities performed in Pipedrive CRM."
+    columns:
+      - name: activity_id
+        description: "Activity identifier. Duplicate activity_ids exists when not filtering for is_done = true in this view."
+        tests:
+          - not_null
+      - name: deal_id
+        description: "Deal identifier the activity is linked to. There might be multiple activities per deal -> be careful when joining with deal_id."
+        tests:
+          - not_null
+      - name: activity_type_key
+        description: "Activity type key used to classify the activity."
+        tests:
+          - not_null
+      - name: activity_type_name
+        description: "Name of activity type (most likely name/label that is displayed in Pipedrive CRM)."
+        tests:
+          - not_null
+      - name: assigned_to_user_id
+        description: "User ID the activity is assigned to."
+        tests:
+          - not_null
+      - name: due_to_ts
+        description: "Timestamp when the activity is/was due."
+        tests:
+          - not_null
+      - name: is_done
+        description: "Completion status. True means the activity was completed, false means it was not done yet."
+        tests:
+          - not_null
+
+  - name: int_crm_pipedrive__deal_owner_details
+    description: "This model breaks down ownership of deals as ownership of deals can change over time (as discovered in EDA). There is no personal information to the user_id (like name or email) in this model to keep personal data contained in staging views. If personal information is required it should be added from staging to the reporting layer and the reporting model containing personal information should be tightly access controlled. This model can be used to attribute ownership for deals and single funnel steps a deal went through based on the timestamps from when until when a user was owner of a deal."
+    columns:
+      - name: deal_id
+        description: "Deal Identifier."
+        tests:
+          - not_null
+      - name: owner
+        description: "User_id of deal owner."
+        tests:
+          - not_null
+      - name: owner_from_ts
+        description: "Timestamp when user became owner of the deal."
+        tests:
+          - not_null
+      - name: owner_to_ts
+        description: "Timestamp until when user was owner of the deal. In case owner_to_ts is null it means that the user is the current owner of the deal."
+
+  - name: int_crm_pipedrive__deal_stage_details
+    description: "This model breaks down stages of a deal as a deal goes through multiple stages in the sales funnel. Deals always starts at stage 1 and can go, but not have to go, up to stage 9. Deals only move forward, never backwards. Deals can skip stages (all as discovered in the initial EDA). This model can be used to report on funnel_stages a deal went through and also identify skipped stages and assigns a proxy timestamp for skipped stages. To exclude skipped stages filter them out with (WHERE was_skipped = false)."
+    columns:
+      - name: deal_id
+        description: "Deal Identifier."
+        tests:
+          - not_null
+      - name: stage_id
+        description: "Stage identifier."
+        tests:
+          - not_null
+      - name: stage_name
+        description: "Name of stage."
+        tests:
+          - not_null
+      - name: stage_entered_ts
+        description: "Timestamp when deal has entered the stage. Null for skipped stages."
+      - name: was_skipped
+        description: "Identifier if stage was skipped (if a deal goes from stage 1 straight to stage 3, stage 2 will show was_skipped = true."
+        tests:
+          - not_null
+      - name: max_stage_id
+        description: "Identifier if stage is the maximum stage the deal has reached."
+        tests:
+          - not_null
+      - name: helper_stage_entered_ts
+        description: "Timestamp when deal has entered the stage. For skipped stages this model assigns the timestamp of the next not skipped stage of the deal_id to this stage."
+        tests:
+          - not_null
+
+  - name: int_crm_pipedrive__deal
+    description: "This model contains all information about the deal on a deal level (one row per deal). For details like ownership changes look at model 'int_pipedrive__deal_owner_details'. For details like stage changes look at model 'int_pipedrive__deal_stage_details'."
+    columns:
+      - name: deal_id
+        description: "Deal Identifier."
+        tests:
+          - not_null
+      - name: created_at
+        description: "Timestamp when the deal was created in Pipedrive CRM."
+        tests:
+          - not_null
+      - name: current_owner
+        description: "The current owner of the deal."
+      - name: max_stage_reached
+        description: "The maximum stage the deal has reached or is currently in (only if not lost yet, but all deals in this table or lost)."
+      - name: max_stage_reached_name
+        description: "Name of maximum stage the deal has reached or is currently in."
+      - name: lost_reason_id
+        description: "Identifier for the reason why the deal was lost."
+      - name: lost_reason_name
+        description: "Name for the reason why the deal was lost."
+      - name: lost_reason_ts
+        description: "Timestamp for when the reason why the deal was lost was entered. If timely entered, can be interpreted as lost date."
+

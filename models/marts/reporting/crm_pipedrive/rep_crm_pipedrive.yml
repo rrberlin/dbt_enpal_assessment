@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: rep_crm_pipedrive__rep_sales_funnel_monthly_version_a
+    description: "The deal count for deals is based on the timestamp when the deal moved between stages. Use this when looking at which deals moved between stages in a given month (approximately for skipped stages). The deal count for activities (funnel_steps 2_1 & 3_1) are based on the due timestamp of done activities as there is no actual done timestamp available in the data."
+    columns:
+      - name: month
+        description: "Month in which the move between stages that is counted in deals_count occurred (approximately for skipped stages) or the done activity in deals_count was due_to."
+      - name: kpi_name
+        description: "Name of funnel step / KPI."
+      - name: funnel_step
+        description: "Funnel step number."
+      - name: deals_count
+        description: "Count of deal stage changes per month (including approximated values for skipped funnel steps)."
+
+  - name: rep_crm_pipedrive__rep_sales_funnel_monthly_version_b
+    description: "The deal count for deals is based on the timestamp when the deal was created. Use this when looking at cohorts of deals (including skipped stages into the count). The deal count for activities (funnel_steps 2_1 & 3_1) are based on the due timestamp of done activities as there is no actual done timestamp available in the data. (This model allows for better comparison between activities and deals as we only have data for activities due_to and deals created between 2024-01-01 and 2024-09_13, but deal changes are recorded up until 2025-02 -> see ETA)"
+    columns:
+      - name: month
+        description: "Month in which the deal that is counted in deals_count was created or the done activity in deals_count was due_to."
+      - name: kpi_name
+        description: "Name of funnel step / KPI."
+      - name: funnel_step
+        description: "Funnel step number."
+      - name: deals_count
+        description: "Count of deal per month of deal creation and funnel steps reached (including skipped funnel steps)."
